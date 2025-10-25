@@ -6,3 +6,211 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// ================== ENUMS ==================
+enum Role {
+  USER
+  SUPERADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum AdminStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum AuthType {
+  OTP
+  AADHAR
+  FACE_RECOGNITION
+  STUDENT_ID
+}
+
+enum ElectionStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum CandidateStatus {
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+enum ComplaintStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+// ================== MODELS ==================
+model User {
+  user_id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fullname      String
+  email         String   @unique
+  password      String
+  role          Role
+  phone_number  String?
+  gender        Gender
+  date_of_birth DateTime
+  address       String
+  profile_photo String
+  joined_at     DateTime @default(now())
+  status        Status
+
+  // Relations
+  candidates   Candidate[]
+  voters       Voter[]
+  admin        Admin[]
+  superadmin   SuperAdmin?
+  complaints   Complaint[]
+}
+
+model Candidate {
+  candidate_id  String   @db.Uuid
+  election_id   String   @db.Uuid
+  user_id       String?  @db.Uuid
+  party_name    String
+  symbol        String
+  manifesto     String?
+  age           Int
+  qualification String
+  total_votes   Int      @default(0)
+  status        CandidateStatus
+  registered_at DateTime @default(now())
+
+  // Relations
+  user               User?           @relation(fields: [user_id], references: [user_id])
+  election           Election        @relation("candidates_in_election", fields: [election_id], references: [election_id])
+  votes              Vote[]
+  winner_in          Election?       @relation("winner_of_election")
+  winner_in_results  ElectionResult? @relation("winner_of_results")
+
+  @@id([candidate_id, election_id])
+}
+
+model Election {
+  election_id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title                String
+  description          String?
+  created_by           String   @db.Uuid
+  start_time           DateTime
+  end_time             DateTime
+  authType             AuthType
+  status               ElectionStatus
+  total_voters         Int
+  total_candidates     Int
+  winner_candidate_id  String?  @db.Uuid
+  winner_election_id   String?  @db.Uuid
+  created_at           DateTime @default(now())
+
+  // Relations
+  created_by_admin Admin @relation(fields: [created_by], references: [admin_id], name: "created_by_admin")
+  winner_candidate Candidate? @relation("winner_of_election", fields: [winner_candidate_id, winner_election_id], references: [candidate_id, election_id])
+  candidates       Candidate[] @relation("candidates_in_election")
+  voters           Voter[]
+  votes            Vote[]
+  results          ElectionResult?
+  complaints       Complaint[]
+
+  @@unique([winner_candidate_id, winner_election_id])
+}
+
+model Admin {
+  admin_id    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String   @db.Uuid
+  election_id String   @db.Uuid
+  designation String
+  created_at  DateTime @default(now())
+  status      AdminStatus
+
+  // Relations
+  user      User     @relation(fields: [user_id], references: [user_id])
+  elections Election[] @relation("created_by_admin")
+}
+
+model Voter {
+  voter_id    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String   @db.Uuid
+  election_id String   @db.Uuid
+  verified    Boolean  @default(false)
+  authType    AuthType
+  has_voted   Boolean  @default(false)
+  voted_at    DateTime?
+
+  // Relations
+  user     User     @relation(fields: [user_id], references: [user_id])
+  election Election @relation(fields: [election_id], references: [election_id])
+  votes    Vote[]
+}
+
+model Vote {
+  vote_id      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  election_id  String   @db.Uuid
+  candidate_id String   @db.Uuid
+  voter_id     String   @db.Uuid
+  cast_time    DateTime @default(now())
+
+  // Relations
+  election  Election  @relation(fields: [election_id], references: [election_id])
+  candidate Candidate @relation(fields: [candidate_id, election_id], references: [candidate_id, election_id])
+  voter     Voter     @relation(fields: [voter_id], references: [voter_id])
+}
+
+model ElectionResult {
+  result_id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  election_id              String   @unique @db.Uuid
+  total_votes              Int
+  voter_turnout_percentage Float
+  winner_candidate_id      String?  @db.Uuid
+  winner_election_id       String?  @db.Uuid
+  result_generated_at      DateTime @default(now())
+  remarks                  String?
+
+  // Relations
+  election Election  @relation(fields: [election_id], references: [election_id])
+  winner   Candidate? @relation("winner_of_results", fields: [winner_candidate_id, winner_election_id], references: [candidate_id, election_id])
+
+  @@unique([winner_candidate_id, winner_election_id])
+}
+
+model SuperAdmin {
+  superadmin_id String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String   @unique @db.Uuid
+
+  // Relations
+  user        User        @relation(fields: [user_id], references: [user_id])
+  complaints  Complaint[] @relation("resolved_by")
+}
+
+model Complaint {
+  complaint_id      String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  election_id       String?         @db.Uuid
+  user_id           String?         @db.Uuid
+  subject           String
+  description       String
+  submitted_at      DateTime        @default(now())
+  status            ComplaintStatus @default(OPEN)
+  resolution_notes  String?
+  resolved_by_id    String?         @db.Uuid
+  resolved_at       DateTime?
+
+  // Relations
+  election    Election?    @relation(fields: [election_id], references: [election_id])
+  user        User?        @relation(fields: [user_id], references: [user_id])
+  resolved_by SuperAdmin?  @relation("resolved_by", fields: [resolved_by_id], references: [superadmin_id])
+}
