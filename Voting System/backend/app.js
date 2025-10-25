@@ -36,6 +36,10 @@ app.use(
 app.use(flash());
 app.use(express.static(path.join(__dirname, "../public")));
 
+// auth routes
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
+
 // const pool=new Pool({
 //     host:process.env.PGHOST,
 //     database:process.env.PGDATABASE,
