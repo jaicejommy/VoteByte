@@ -1,0 +1,59 @@
+{
+  "active": [
+    {
+      "id": "1",
+      "title": "College President Election 2025",
+      "description": "Vote for your next college president.",
+      "startDate": "2025-10-20",
+      "endDate": "2025-10-30",
+      "candidates": [
+        { "id": "c1", "name": "Aarav Sharma", "party": "Unity Front", "votes": 123 },
+        { "id": "c2", "name": "Neha Singh", "party": "Progress Party", "votes": 89 },
+        { "id": "c3", "name": "Rohan Patel", "party": "Student Voice", "votes": 67 }
+      ],
+      "status": "active",
+      "image": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f"
+    },
+    {
+      "id": "2",
+      "title": "Tech Fest Organizing Team Lead",
+      "description": "Choose who leads the annual TechFest 2025.",
+      "startDate": "2025-10-22",
+      "endDate": "2025-10-29",
+      "candidates": [
+        { "id": "c1", "name": "Ishita Verma", "party": "InnovateX", "votes": 200 },
+        { "id": "c2", "name": "Kunal Yadav", "party": "TechUnity", "votes": 150 }
+      ],
+      "status": "active",
+      "image": "https://images.unsplash.com/photo-1551836022-4c4c79ecde51"
+    }
+  ],
+  "upcoming": [
+    {
+      "id": "3",
+      "title": "Sports Captain Election",
+      "description": "Upcoming election for the sports department captain.",
+      "startDate": "2025-11-05",
+      "endDate": "2025-11-10",
+      "candidates": [],
+      "status": "upcoming",
+      "image": "https://images.unsplash.com/photo-1521412644187-c49fa049e84d"
+    }
+  ],
+  "past": [
+    {
+      "id": "4",
+      "title": "Cultural Club Leader Election 2024",
+      "description": "Results of the 2024 Cultural Club election.",
+      "startDate": "2024-09-15",
+      "endDate": "2024-09-25",
+      "candidates": [
+        { "id": "c1", "name": "Priya Mehta", "party": "ArtFusion", "votes": 230 },
+        { "id": "c2", "name": "Vikram Rao", "party": "CultureHub", "votes": 180 }
+      ],
+      "winner": "Priya Mehta",
+      "status": "past",
+      "image": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d"
+    }
+  ]
+}
