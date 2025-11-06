@@ -126,6 +126,45 @@ export default function ActiveElection() {
     );
   }
 
+  // Past elections: show results
+  if (status === "past") {
+    const computedWinner = election.winner || (election.candidates || []).reduce((max, c) => {
+      return c.votes > (max?.votes ?? -1) ? c : max;
+    }, null)?.name;
+
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen p-10 text-[var(--text)]" style={{ background: "var(--bg)" }}>
+        <div className="max-w-3xl mx-auto space-y-6">
+          <div className="rounded-2xl p-6 border shadow-[var(--shadow-soft)]" style={{ background: "var(--surface-1)", borderColor: "var(--border)" }}>
+            <h1 className="text-3xl font-bold mb-2">{election.title}</h1>
+            <p className="text-sm text-[var(--text-muted)] mb-4">{election.startDate} → {election.endDate}</p>
+            <p className="leading-relaxed mb-4">{election.description}</p>
+
+            <h2 className="text-2xl font-semibold mb-3">Results</h2>
+            <div className="grid gap-3">
+              {(election.candidates || []).map((c) => (
+                <div key={c.id} className="flex items-center justify-between rounded-lg p-4 border"
+                  style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+                  <div>
+                    <p className="font-semibold">{c.name}</p>
+                    <p className="text-sm text-[var(--text-muted)]">{c.party}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold">{c.votes ?? 0} votes</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 rounded-xl p-4 border" style={{ borderColor: "var(--border)", background: "var(--glass-bg)", backdropFilter: "blur(var(--glass-blur))" }}>
+              <p className="text-xl font-bold">Winner: <span className="text-emerald-500">{computedWinner || "TBD"}</span></p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
   // Fallback for other statuses
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen p-10 text-[var(--text)]" style={{ background: "var(--bg)" }}>

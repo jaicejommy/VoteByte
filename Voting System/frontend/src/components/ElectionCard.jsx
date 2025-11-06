@@ -67,30 +67,44 @@ export default function ElectionCard({ election, theme }) {
         </p>
 
         {/* Buttons */}
-        <div className="grid grid-cols-2 gap-2 mt-2">
-          <motion.button
-            onClick={handleView}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="px-4 py-2 rounded-[var(--radius-md)] font-medium text-white shadow-[var(--shadow-accent)]"
-            style={{ backgroundImage: "var(--linear-primary)" }}
-          >
-            View Details
-          </motion.button>
+        {election.status === "past" ? (
+          <div className="mt-2">
+            <motion.button
+              onClick={() => navigate(`/election/past/${election.id}`)}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="w-full px-4 py-2 rounded-[var(--radius-md)] font-medium text-white shadow-[var(--shadow-accent)]"
+              style={{ backgroundImage: "var(--linear-primary)" }}
+            >
+              View Results
+            </motion.button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <motion.button
+              onClick={handleView}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="px-4 py-2 rounded-[var(--radius-md)] font-medium text-white shadow-[var(--shadow-accent)]"
+              style={{ backgroundImage: "var(--linear-primary)" }}
+            >
+              View Details
+            </motion.button>
 
-          <motion.button
-            onClick={() => navigate(`/election/${election.status}/${election.id}/candidates`)}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className={`px-4 py-2 rounded-[var(--radius-md)] font-medium transition-all border ${
-              theme === "dark"
-                ? "text-[var(--text)] border-[var(--border)] bg-[var(--surface-1)] hover:bg-[var(--surface-2)]"
-                : "text-[#1E3A8A] border-[#D6E0FF] bg-white hover:bg-[#F8FAFF]"
-            }`}
-          >
-            Manifesto
-          </motion.button>
-        </div>
+            <motion.button
+              onClick={() => navigate(`/election/${election.status}/${election.id}/candidates`)}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className={`px-4 py-2 rounded-[var(--radius-md)] font-medium transition-all border ${
+                theme === "dark"
+                  ? "text-[var(--text)] border-[var(--border)] bg-[var(--surface-1)] hover:bg-[var(--surface-2)]"
+                  : "text-[#1E3A8A] border-[#D6E0FF] bg-white hover:bg-[#F8FAFF]"
+              }`}
+            >
+              Manifesto
+            </motion.button>
+          </div>
+        )}
       </div>
     </motion.div>
   );
