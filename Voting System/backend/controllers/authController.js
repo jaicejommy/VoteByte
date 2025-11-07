@@ -1,11 +1,26 @@
 const authService = require('../services/authService');
+const uploadToCloudinary = require('../utils/uploadToCloudinary');
 
 async function register(req, res) {
   try {
-    const { fullname, email, password, role, phone_number, gender, date_of_birth, address, profile_photo } = req.body;
+    const { fullname, email, password, role, phone_number, gender, date_of_birth, address } = req.body;
 
     if (!fullname || !email || !password) {
       return res.status(400).json({ message: 'fullname, email and password are required' });
+    }
+
+    // If a file was uploaded via multer memory storage, upload to Cloudinary
+    let profilePhotoUrl = '';
+    if (req.file && req.file.buffer) {
+      try {
+        profilePhotoUrl = await uploadToCloudinary(req.file.buffer, 'profile_photos');
+      } catch (uploadErr) {
+        console.error('Cloudinary upload error', uploadErr);
+        return res.status(500).json({ message: 'Failed to upload profile photo' });
+      }
+    } else if (req.body.profile_photo) {
+      // fallback: client provided a URL in the body
+      profilePhotoUrl = req.body.profile_photo;
     }
 
     const user = await authService.registerUser({
@@ -17,7 +32,7 @@ async function register(req, res) {
       gender: gender || 'OTHER',
       date_of_birth: date_of_birth ? new Date(date_of_birth) : new Date(),
       address: address || '',
-      profile_photo: profile_photo || '',
+      profile_photo: profilePhotoUrl,
     });
 
     return res.status(201).json({ user });
