@@ -20,6 +20,21 @@ app.set("view engine", "ejs");
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// JSON parse error handler: return JSON on bad JSON instead of HTML stack trace
+app.use((err, req, res, next) => {
+  // body-parser / express.json() produces a SyntaxError with status 400 when JSON is invalid
+  if (err && (err instanceof SyntaxError) && err.status === 400 && 'body' in err) {
+    console.error('Invalid JSON payload:', err.message);
+    return res.status(400).json({ success: false, message: 'Invalid JSON payload', error: err.message });
+  }
+  // some versions of body-parser set err.type === 'entity.parse.failed'
+  if (err && err.type === 'entity.parse.failed') {
+    console.error('Invalid JSON payload (entity.parse.failed):', err.message);
+    return res.status(400).json({ success: false, message: 'Invalid JSON payload', error: err.message });
+  }
+  return next(err);
+});
 app.use(
   cors({
     origin: allowedOrigins,
@@ -39,6 +54,10 @@ app.use(express.static(path.join(__dirname, "../public")));
 // auth routes
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
+
+// election routes
+const electionRoutes = require('./routes/election');
+app.use('/api/elections', electionRoutes);
 
 // const pool=new Pool({
 //     host:process.env.PGHOST,
