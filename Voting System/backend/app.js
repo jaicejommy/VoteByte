@@ -63,6 +63,14 @@ app.use('/api/elections', electionRoutes);
 const candidateRoutes = require('./routes/candidate');
 app.use('/api/candidates', candidateRoutes);
 
+// vote routes
+const voteRoutes = require('./routes/vote');
+app.use('/api/votes', voteRoutes);
+
+// voter routes
+const voterRoutes = require('./routes/voter');
+app.use('/api/voters', voterRoutes);
+
 // const pool=new Pool({
 //     host:process.env.PGHOST,
 //     database:process.env.PGDATABASE,
