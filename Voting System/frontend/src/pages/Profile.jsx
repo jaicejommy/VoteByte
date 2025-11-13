@@ -1,24 +1,43 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Mail, Calendar, X, Award, TrendingUp, CheckCircle, Clock, Shield, Edit2, Camera } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuthStore } from "../store/authStore";
 
 const Profile = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(0);
   
-  // Dummy user data
-  const [user, setUser] = useState({
-    name: "Alex Johnson",
-    email: "alex.johnson@university.edu",
-    joined: "January 2024",
-    role: "Student Voter",
-    department: "Computer Science",
-    year: "3rd Year",
-    studentId: "CS2022-1234"
+  // Get authenticated user from auth store
+  const { user: authUser } = useAuthStore();
+
+  // Local copy to allow editing in the UI without forcing an auth update
+  const [localUser, setLocalUser] = useState({
+    name: authUser?.fullname || "Guest User",
+    email: authUser?.email || "—",
+    joined: authUser?.joined_at ? new Date(authUser.joined_at).toLocaleDateString() : "—",
+    role: authUser?.role || "Student Voter",
+    department: authUser?.department || "—",
+    year: authUser?.year || "—",
+    studentId: authUser?.student_id || authUser?.user_id || "—"
   });
 
-  const [newName, setNewName] = useState(user.name);
+  const [newName, setNewName] = useState(localUser.name);
+
+  // Keep localUser in sync when authUser changes
+  useEffect(() => {
+    const updated = {
+      name: authUser?.fullname || "Guest User",
+      email: authUser?.email || "—",
+      joined: authUser?.joined_at ? new Date(authUser.joined_at).toLocaleDateString() : "—",
+      role: authUser?.role || "Student Voter",
+      department: authUser?.department || "—",
+      year: authUser?.year || "—",
+      studentId: authUser?.student_id || authUser?.user_id || "—"
+    };
+    setLocalUser(updated);
+    setNewName(updated.name);
+  }, [authUser]);
 
   // Avatar options
   const avatarlinears = [
@@ -52,7 +71,7 @@ const Profile = () => {
   ];
 
   const handleUpdate = async () => {
-    setUser({ ...user, name: newName });
+    setLocalUser({ ...localUser, name: newName });
     setIsModalOpen(false);
   };
 
@@ -86,7 +105,7 @@ const Profile = () => {
                 className={`w-32 h-32 bg-linear-to-br ${avatarlinears[selectedAvatar]} rounded-full flex items-center justify-center text-5xl font-bold shadow-2xl cursor-pointer`}
                 onClick={() => setIsPhotoModalOpen(true)}
               >
-                {user.name.charAt(0)}
+                {(localUser.name || 'U').charAt(0)}
               </motion.div>
               <motion.button
                 whileHover={{ scale: 1.1 }}
@@ -102,7 +121,7 @@ const Profile = () => {
             {/* User Info */}
             <div className="flex-1 text-center md:text-left">
               <div className="flex items-center gap-3 justify-center md:justify-start mb-2">
-                <h1 className="text-4xl font-bold text-green-400">{user.name}</h1>
+                <h1 className="text-4xl font-bold text-green-400">{localUser.name}</h1>
                 <motion.button
                   whileHover={{ scale: 1.1, rotate: 5 }}
                   whileTap={{ scale: 0.9 }}
@@ -114,26 +133,26 @@ const Profile = () => {
               </div>
               
               <div className="flex flex-wrap gap-4 justify-center md:justify-start text-gray-300 mb-3">
-                <span className="flex items-center gap-2">
-                  <Mail size={16} className="text-green-400" /> {user.email}
+                  <span className="flex items-center gap-2">
+                  <Mail size={16} className="text-green-400" /> {localUser.email}
                 </span>
                 <span className="flex items-center gap-2">
-                  <Calendar size={16} className="text-green-400" /> Joined {user.joined}
+                  <Calendar size={16} className="text-green-400" /> Joined {localUser.joined}
                 </span>
               </div>
 
               <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                <span className="px-3 py-1 bg-green-500/20 border border-green-500/40 rounded-full text-sm">
-                  {user.role}
+                  <span className="px-3 py-1 bg-green-500/20 border border-green-500/40 rounded-full text-sm">
+                  {localUser.role}
                 </span>
                 <span className="px-3 py-1 bg-blue-500/20 border border-blue-500/40 rounded-full text-sm">
-                  {user.department}
+                  {localUser.department}
                 </span>
                 <span className="px-3 py-1 bg-purple-500/20 border border-purple-500/40 rounded-full text-sm">
-                  {user.year}
+                  {localUser.year}
                 </span>
                 <span className="px-3 py-1 bg-emerald-500/20 border border-emerald-500/40 rounded-full text-sm flex items-center gap-1">
-                  <Shield size={14} /> ID: {user.studentId}
+                  <Shield size={14} /> ID: {localUser.studentId}
                 </span>
               </div>
             </div>
@@ -349,7 +368,7 @@ const Profile = () => {
                         selectedAvatar === index ? 'ring-4 ring-green-400' : ''
                       }`}
                     >
-                      {user.name.charAt(0)}
+                      {(localUser.name || 'U').charAt(0)}
                     </motion.div>
                   ))}
                 </div>

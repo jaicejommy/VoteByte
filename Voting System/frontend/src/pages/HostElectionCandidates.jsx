@@ -1,26 +1,32 @@
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
-
-// Mocked data per election id for demo
-const MOCK_CANDIDATES = {
-  1: [
-    { id: "c1", name: "Aarav Mehta", role: "President", manifesto: "I will improve campus wi-fi, expand library hours, and create transparent budgeting dashboards for all societies." },
-    { id: "c2", name: "Sara Nair", role: "President", manifesto: "Focus on mental health resources, peer mentorship programs, and greener campus initiatives with measurable goals." },
-  ],
-  2: [
-    { id: "c3", name: "Vikram Rao", role: "Sports Captain", manifesto: "Inter-hostel leagues, modern equipment, and an athlete support fund for travel and tournaments." },
-  ],
-  3: [
-    { id: "c4", name: "Isha Kapoor", role: "Cultural Lead", manifesto: "Monthly open-mic nights, inclusive workshops, and a student-run production studio for events." },
-  ],
-};
+import { useState, useEffect } from "react";
+import api from "../services/apiService";
+import { toast } from "react-hot-toast";
 
 export default function HostElectionCandidates() {
   const { id } = useParams();
   const electionId = String(id);
   const [openId, setOpenId] = useState(null);
-  const candidates = MOCK_CANDIDATES[electionId] || [];
+  const [candidates, setCandidates] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchCandidates = async () => {
+      setIsLoading(true);
+      try {
+        const res = await api.get(`/candidates/election/${electionId}`);
+        setCandidates(res.data?.data || []);
+      } catch (err) {
+        console.error('Failed to fetch election candidates', err);
+        toast.error(err.response?.data?.message || 'Failed to load candidates');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCandidates();
+  }, [electionId]);
 
   return (
     <div className="min-h-screen w-full px-6 py-10 text-[var(--text)]" style={{ background: "var(--bg)" }}>
@@ -33,7 +39,10 @@ export default function HostElectionCandidates() {
         </p>
 
         <div className="grid md:grid-cols-2 gap-6">
-          {candidates.map((c, idx) => (
+          {isLoading ? (
+            <div className="md:col-span-2 text-center py-16">Loading candidates...</div>
+          ) : (
+            candidates.map((c, idx) => (
             <motion.div
               key={c.id}
               initial={{ opacity: 0, y: 16 }}
@@ -44,8 +53,8 @@ export default function HostElectionCandidates() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-xl font-semibold" style={{ color: "var(--text)" }}>{c.name}</h3>
-                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>{c.role}</p>
+                    <h3 className="text-xl font-semibold" style={{ color: "var(--text)" }}>{c.name}</h3>
+                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>{c.party_name || c.role}</p>
                 </div>
                 <button
                   className="px-3 py-1.5 rounded-[var(--radius-sm)] text-white text-sm font-medium"
@@ -56,7 +65,8 @@ export default function HostElectionCandidates() {
                 </button>
               </div>
             </motion.div>
-          ))}
+            ))
+          )}
 
           {candidates.length === 0 && (
             <div className="md:col-span-2 text-center py-16" style={{ color: "var(--text-muted)" }}>

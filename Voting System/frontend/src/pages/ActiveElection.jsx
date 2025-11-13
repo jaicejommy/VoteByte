@@ -4,9 +4,14 @@ import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
 export default function ActiveElection() {
-  const { status = "active", id } = useParams();
+  const { status: rawStatus = "active", id } = useParams();
+  const status = String(rawStatus || "").toLowerCase();
+  const isOngoing = status === "ongoing" || status === "active";
+  const isUpcoming = status === "upcoming";
+  const isPast = status === "completed" || status === "past";
+
   const { getElectionById, submitCandidateApplication } = useElectionStore();
-  const election = useMemo(() => getElectionById(status, id), [getElectionById, status, id]);
+  const election = useMemo(() => getElectionById(rawStatus, id), [getElectionById, rawStatus, id]);
 
   const [form, setForm] = useState({ name: "", party: "", manifesto: "", department: "", year: "", contact: "" });
   const [submittedId, setSubmittedId] = useState(null);
@@ -25,8 +30,8 @@ export default function ActiveElection() {
     setSubmittedId(id);
   };
 
-  // Active elections view
-  if (status === "active") {
+  // Active / Ongoing elections view
+  if (isOngoing) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen p-10 text-[var(--text)]" style={{ background: "var(--bg)" }}>
         <h1 className="text-3xl font-bold mb-2">{election.title}</h1>
@@ -34,11 +39,11 @@ export default function ActiveElection() {
 
         <h2 className="text-2xl mb-4">Candidates</h2>
         <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {election.candidates.map((c) => (
-            <motion.div key={c.id} whileHover={{ scale: 1.02 }} className="p-4 rounded-lg border"
+          {(election.candidates || []).map((c) => (
+            <motion.div key={c.id || c.candidate_id} whileHover={{ scale: 1.02 }} className="p-4 rounded-lg border"
               style={{ background: "var(--surface-1)", borderColor: "var(--border)" }}>
-              <h3 className="text-lg font-semibold">{c.name}</h3>
-              <p className="text-sm text-[var(--text-muted)]">{c.party}</p>
+              <h3 className="text-lg font-semibold">{c.name || c.user?.fullname || c.party_name}</h3>
+              <p className="text-sm text-[var(--text-muted)]">{c.party || c.party_name}</p>
               <button className="mt-3 px-4 py-2 rounded-[var(--radius-sm)] text-white"
                 style={{ backgroundImage: "var(--linear-primary)" }}>
                 Vote
@@ -51,7 +56,7 @@ export default function ActiveElection() {
   }
 
   // Upcoming elections: show description + participate form
-  if (status === "upcoming") {
+  if (isUpcoming) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen p-10 text-[var(--text)]" style={{ background: "var(--bg)" }}>
         <div className="max-w-3xl mx-auto space-y-6">
