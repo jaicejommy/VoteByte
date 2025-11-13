@@ -1,157 +1,169 @@
 import { create } from 'zustand';
 import { toast } from 'react-hot-toast';
+import api from '../services/apiService';
 
 const useAuthStore = create((set, get) => ({
   user: null,
   isAuthenticated: false,
   isCheckingAuth: true,
   error: null,
-  tempUser: null,
+  isLoading: false,
+  tempEmail: null,
 
-  signup: async (userData) => {
-    set({error: null})
+  signup: async (fullname, email, password, role = 'USER') => {
+    set({ error: null, isLoading: true });
     try {
-      const { email, password, name, userType = 'user' } = userData;
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-
-      if (users.some((user) => user.email === email)) {
-        set({ error: 'User already exists' });
-        return false;
-      }
-
-      const tempUser = {
-        id: Date.now().toString(),
+      const response = await api.post('/auth/register', {
+        fullname,
         email,
         password,
-        name,
-        userType,
-        createdAt: new Date().toISOString(),
-        isVerified: false,
-        otp: '123456', // demo OTP
-      };
-
-      set({ tempUser });
-      return true;
-    } catch (error) {
-      set({ error: error.message });
-      return false;
-    }
-  },
-
-  verifyEmail: async (otp) => {
-    set({error: null})
-    try {
-      const { tempUser } = get();
-
-      if (!tempUser) {
-        set({ error: 'No pending verification' });
-        return false;
-      }
-
-      if (otp !== tempUser.otp) {
-        set({ error: 'Invalid OTP' });
-        return false;
-      }
-
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-
-      const { otp: _, ...verifiedUser } = {
-        ...tempUser,
-        isVerified: true,
-      };
-
-      users.push(verifiedUser);
-      localStorage.setItem('users', JSON.stringify(users));
-
-      const { password: __, ...safeUser } = verifiedUser;
-      localStorage.setItem('currentUser', JSON.stringify(safeUser));
-
-      set({
-        user: safeUser,
-        isAuthenticated: true,
-        tempUser: null,
-        error: null,
+        role,
       });
 
+      const { user } = response.data;
+      
+      // Store user data temporarily (needs email verification)
+      set({ 
+        tempEmail: email,
+        user: {
+          ...user,
+          fullname: user.fullname || fullname,
+          role: user.role || role,
+        }
+      });
+      
+      toast.success('Registration successful! Check your email for verification.');
       return true;
     } catch (error) {
-      set({ error: error.message });
+      const errorMessage = error.response?.data?.message || error.message || 'Signup failed';
+      set({ error: errorMessage });
+      toast.error(errorMessage);
       return false;
+    } finally {
+      set({ isLoading: false });
     }
   },
 
-  login: async ({ email, password }) => {
-    set({error: null})
+  login: async (email, password) => {
+    set({ error: null, isLoading: true });
     try {
-      let users = JSON.parse(localStorage.getItem('users') || '[]');
-
-      let user = users.find((u) => u.email === email && u.password === password);
-     
-      if (!user) {
-        set({ error: 'Invalid credentials' });
-        return false;
+      const response = await api.post('/auth/login', { email, password });
+      
+      const { user, token } = response.data;
+      
+      // Store token in localStorage
+      if (token) {
+        localStorage.setItem('authToken', token);
       }
-
-      if (!user.isVerified) {
-        set({ error: 'Please verify your email first' });
-        return false;
-      }
-
-      const { password: _, ...safeUser } = user;
-      localStorage.setItem('currentUser', JSON.stringify(safeUser));
-
+      
+      // Store user data
+      const userData = {
+        user_id: user.user_id,
+        email: user.email,
+        fullname: user.fullname,
+        role: user.role,
+        phone_number: user.phone_number,
+        gender: user.gender,
+        date_of_birth: user.date_of_birth,
+        address: user.address,
+        profile_photo: user.profile_photo,
+        joined_at: user.joined_at,
+        status: user.status,
+        // Backend doesn't have isVerified, so we check status
+        isVerified: user.status === 'ACTIVE',
+      };
+      
+      localStorage.setItem('user', JSON.stringify(userData));
+      
       set({
-        user: safeUser,
+        user: userData,
         isAuthenticated: true,
         error: null,
       });
 
-      toast.success(`Welcome back, ${safeUser.name}!`);
+      toast.success(`Welcome back, ${user.fullname}!`);
       return true;
     } catch (error) {
-      set({ error: error.message });
+      const errorMessage = error.response?.data?.message || error.message || 'Login failed';
+      set({ error: errorMessage });
+      toast.error(errorMessage);
       return false;
+    } finally {
+      set({ isLoading: false });
     }
   },
 
   resendOTP: async () => {
-    const { tempUser } = get();
-    if (!tempUser) {
+    const { tempEmail } = get();
+    if (!tempEmail) {
       set({ error: 'No pending verification' });
       return false;
     }
 
-    toast.success(`OTP resent: 123456`);
-    return true;
+    try {
+      set({ isLoading: true });
+      await api.post('/auth/resend-verification', { email: tempEmail });
+      toast.success('Verification email resent!');
+      return true;
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Failed to resend email';
+      set({ error: errorMessage });
+      toast.error(errorMessage);
+      return false;
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
   checkAuth: async () => {
     try {
       set({ isCheckingAuth: true });
-
-      const savedUser = localStorage.getItem('currentUser');
-      if (savedUser) {
+      
+      const token = localStorage.getItem('authToken');
+      const savedUser = localStorage.getItem('user');
+      
+      if (token && savedUser) {
         const user = JSON.parse(savedUser);
         set({
           user,
           isAuthenticated: true,
           error: null,
         });
+      } else {
+        set({
+          user: null,
+          isAuthenticated: false,
+        });
       }
     } catch (error) {
-      set({ error: error.message });
+      console.error('Auth check error:', error);
+      set({
+        user: null,
+        isAuthenticated: false,
+      });
     } finally {
       set({ isCheckingAuth: false });
     }
   },
 
-  logout: () => {
-    localStorage.removeItem('currentUser');
-    set({
-      user: null,
-      isAuthenticated: false,
-      error: null,
-    });
+  logout: async () => {
+    try {
+      set({ isLoading: true });
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      
+      set({
+        user: null,
+        isAuthenticated: false,
+        error: null,
+        isLoading: false,
+      });
+      toast.success('Logged out successfully');
+    }
   },
 
   clearError: () => set({ error: null }),

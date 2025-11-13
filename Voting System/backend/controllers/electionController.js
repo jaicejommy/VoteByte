@@ -7,6 +7,8 @@ const ApiResponse = require('../utils/ApiResponse');
  *  - createElection
  *  - getAllElections
  *  - getElectionById
+ *  - getUserElections
+ *  - getElectionsByStatus
  */
 
 exports.createElection = async (req, res) => {
@@ -49,6 +51,38 @@ exports.getElectionById = async (req, res) => {
     if (error.message && error.message.toLowerCase().includes('not found')) {
       return ApiResponse.notFound(res, 'Election not found');
     }
+    return ApiResponse.error(res, error.message || 'Internal server error');
+  }
+};
+
+exports.getUserElections = async (req, res) => {
+  try {
+    const userId = req.user && req.user.user_id;
+    
+    if (!userId) {
+      return ApiResponse.unauthorized(res, 'Authentication required');
+    }
+
+    const elections = await electionService.getUserElections(userId);
+    return ApiResponse.success(res, 'User elections retrieved successfully', elections);
+  } catch (error) {
+    console.error('Error fetching user elections:', error);
+    return ApiResponse.error(res, error.message || 'Internal server error');
+  }
+};
+
+exports.getElectionsByStatus = async (req, res) => {
+  try {
+    const status = req.params.status;
+
+    if (!status) {
+      return ApiResponse.badRequest(res, 'Status parameter is required');
+    }
+
+    const elections = await electionService.getElectionsByStatus(status);
+    return ApiResponse.success(res, `${status} elections retrieved successfully`, elections);
+  } catch (error) {
+    console.error('Error fetching elections by status:', error);
     return ApiResponse.error(res, error.message || 'Internal server error');
   }
 };

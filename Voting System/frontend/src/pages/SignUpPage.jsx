@@ -20,11 +20,17 @@ const SignUpPage = ({ theme }) => {
   // Submit signup form and redirect
   const handleSignUp = async (e) => {
     e.preventDefault();
-    try {
-      await signup(email, password, name, userType);
+    
+    if (!name || !email || !password) {
+      return;
+    }
+
+    // Convert userType to match backend expectations
+    const role = userType.toUpperCase() === 'USER' ? 'USER' : 'HOST';
+    
+    const success = await signup(name, email, password, role);
+    if (success) {
       navigate("/verify-email");
-    } catch (error) {
-      console.error(error);
     }
   };
 

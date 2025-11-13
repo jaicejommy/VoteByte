@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
+import DateInput from "../components/DateInput";
 
 const mockElection = {
   id: 1,
@@ -54,18 +55,20 @@ const EditElection = () => {
             rows="4"
           />
           <div className="flex gap-4">
-            <input
-              type="date"
-              value={form.startDate}
-              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-              className="w-1/2 bg-gray-800/40 border border-green-400/20 p-3 rounded-lg focus:border-green-400 outline-none"
-            />
-            <input
-              type="date"
-              value={form.endDate}
-              onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-              className="w-1/2 bg-gray-800/40 border border-green-400/20 p-3 rounded-lg focus:border-green-400 outline-none"
-            />
+            <div className="w-1/2">
+              <DateInput
+                label="Start Date"
+                value={form.startDate}
+                onChange={(value) => setForm({ ...form, startDate: value })}
+              />
+            </div>
+            <div className="w-1/2">
+              <DateInput
+                label="End Date"
+                value={form.endDate}
+                onChange={(value) => setForm({ ...form, endDate: value })}
+              />
+            </div>
           </div>
 
           <motion.button

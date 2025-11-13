@@ -1,17 +1,79 @@
 import { create } from "zustand";
-import data from "../data/elections.json";
+import api from "../services/apiService";
 
 export const useElectionStore = create((set, get) => ({
-  elections: { active: [], upcoming: [], past: [] },
-  pendingCandidates: [], // { id, electionId, name, party, manifesto, department, year, contact, status, submittedAt }
+  elections: { UPCOMING: [], ONGOING: [], COMPLETED: [] },
+  userElections: [],
+  isLoading: false,
+  error: null,
+  pendingCandidates: [],
 
-  fetchElections: () => {
-    set({ elections: data });
+  // Fetch all elections grouped by status
+  fetchElections: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const upcomingRes = await api.get('/elections/status/UPCOMING');
+      const ongoingRes = await api.get('/elections/status/ONGOING');
+      const completedRes = await api.get('/elections/status/COMPLETED');
+
+      set({
+        elections: {
+          UPCOMING: upcomingRes.data?.data || [],
+          ONGOING: ongoingRes.data?.data || [],
+          COMPLETED: completedRes.data?.data || []
+        },
+        isLoading: false
+      });
+    } catch (error) {
+      console.error('Error fetching elections:', error);
+      set({
+        error: error.response?.data?.message || 'Failed to fetch elections',
+        isLoading: false
+      });
+    }
   },
 
-  getElectionById: (type, id) => {
-    const src = get().elections[type]?.length ? get().elections : data;
-    return src[type]?.find((el) => el.id === id);
+  // Fetch user's own elections (created by the logged-in user)
+  fetchUserElections: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await api.get('/elections/user/my-elections');
+      set({
+        userElections: response.data?.data || [],
+        isLoading: false
+      });
+    } catch (error) {
+      console.error('Error fetching user elections:', error);
+      set({
+        error: error.response?.data?.message || 'Failed to fetch your elections',
+        isLoading: false
+      });
+    }
+  },
+
+  // Fetch elections by specific status
+  fetchElectionsByStatus: async (status) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await api.get(`/elections/status/${status}`);
+      set({
+        elections: {
+          ...get().elections,
+          [status]: response.data?.data || []
+        },
+        isLoading: false
+      });
+    } catch (error) {
+      console.error(`Error fetching ${status} elections:`, error);
+      set({
+        error: error.response?.data?.message || `Failed to fetch ${status} elections`,
+        isLoading: false
+      });
+    }
+  },
+
+  getElectionById: (status, id) => {
+    return get().elections[status]?.find((el) => el.election_id === id);
   },
 
   submitCandidateApplication: (electionId, payload) => {

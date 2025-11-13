@@ -14,14 +14,22 @@ const LoginPage = ({ theme }) => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    try {
-      await login(email, password);
-      if (isAuthenticated && user?.isVerified) {
-        toast.success("Login Successful");
-        navigate("/");
+    
+    if (!email || !password) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    const success = await login(email, password);
+    if (success) {
+      toast.success("Login Successful");
+      // Determine where to navigate based on user role
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (user.role === 'HOST') {
+        navigate("/host/dashboard");
+      } else {
+        navigate("/dashboard");
       }
-    } catch (error) {
-      console.error(error);
     }
   };
 

@@ -126,41 +126,41 @@ export default function UserRoutes({onToggleTheme, theme}) {
         <Route 
           path="/host/dashboard" 
           element={
-            <HostProtectRoute>
+            <ProtectRoute>
               <HostDashboard />
-            </HostProtectRoute>
+            </ProtectRoute>
           } 
         />
         <Route 
           path="/host/elections" 
           element={
-            <HostProtectRoute>
+            <ProtectRoute>
               <HostElections />
-            </HostProtectRoute>
+            </ProtectRoute>
           } 
         />
         <Route 
           path="/host/election/new" 
           element={
-            <HostProtectRoute>
+            <ProtectRoute>
               <CreateElection />
-            </HostProtectRoute>
+            </ProtectRoute>
           } 
         />
         <Route 
           path="/host/election/:id/edit" 
           element={
-            <HostProtectRoute>
+            <ProtectRoute>
               <EditElection />
-            </HostProtectRoute>
+            </ProtectRoute>
           } 
         />
         <Route 
           path="/host/election/:id/candidates" 
           element={
-            <HostProtectRoute>
+            <ProtectRoute>
               <HostElectionCandidates />
-            </HostProtectRoute>
+            </ProtectRoute>
           } 
         />
 

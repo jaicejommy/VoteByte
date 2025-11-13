@@ -26,16 +26,16 @@ const Navbar = ({ onToggleTheme, theme }) => {
     { path: "/profile", label: "Profile" },
   ];
 
-  const hostLinks = [
+  const authenticatedLinks = [
     { path: "/host/dashboard", label: "Host Dashboard" },
     { path: "/host/elections", label: "My Elections" },
     { path: "/host/election/new", label: "Create Election" },
   ];
 
-  const allNavLinks =
-    isAuthenticated && user?.userType === "host"
-      ? [...navLinks, ...hostLinks]
-      : navLinks;
+  // Show auth-only links if user is authenticated
+  const allNavLinks = isAuthenticated 
+    ? [...navLinks, ...authenticatedLinks]
+    : navLinks;
 
   return (
     <motion.nav
@@ -61,12 +61,6 @@ className={`sticky top-0 left-0 w-full z-50 h-16 md:h-20 backdrop-blur-md border
           >
             VoteByte
           </Link>
-          {isAuthenticated && user?.userType === "host" && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium text-white"
-              style={{ backgroundImage: "var(--linear-primary)" }}>
-              HOST
-            </span>
-          )}
         </motion.div>
 
         <div className="hidden md:flex items-center gap-6">

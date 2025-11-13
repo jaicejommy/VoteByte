@@ -1,11 +1,20 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { Calendar, Users } from "lucide-react";
 
 export default function ElectionCard({ election, theme }) {
   const navigate = useNavigate();
 
   const handleView = () => {
-    navigate(`/election/${election.status}/${election.id}`);
+    navigate(`/election/${election.status}/${election.election_id}`);
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
 
   return (
@@ -29,23 +38,15 @@ export default function ElectionCard({ election, theme }) {
 
       {/* Content */}
       <div className="relative z-10">
-        {/* Image */}
-        <div className="relative overflow-hidden rounded-lg mb-4">
-          <motion.img
-            src={election.image}
-            alt={election.title}
-            className="w-full h-40 object-cover"
-            whileHover={{ scale: 1.1 }}
-            transition={{ duration: 0.3 }}
-          />
-          {/* Image overlay linear */}
-          <div
-            className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-              theme === "dark"
-                ? "bg-linear-to-t from-gray-900/60 to-transparent"
-                : "bg-linear-to-t from-[#1E3A8A]/40 to-transparent"
-            }`}
-          />
+        {/* Status Badge */}
+        <div className="mb-3">
+          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+            election.status === 'UPCOMING' ? 'bg-blue-500/20 text-blue-300' :
+            election.status === 'ONGOING' ? 'bg-green-500/20 text-green-300' :
+            'bg-gray-500/20 text-gray-300'
+          }`}>
+            {election.status}
+          </span>
         </div>
 
         {/* Title */}
@@ -66,14 +67,30 @@ export default function ElectionCard({ election, theme }) {
           {election.description}
         </p>
 
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-2 mb-4 text-sm">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-green-400" />
+            <span className={theme === "dark" ? "text-gray-400" : "text-[#5A678A]"}>
+              {election.total_candidates || 0} Candidates
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-green-400" />
+            <span className={theme === "dark" ? "text-gray-400" : "text-[#5A678A]"}>
+              {formatDate(election.start_time)}
+            </span>
+          </div>
+        </div>
+
         {/* Buttons */}
-        {election.status === "past" ? (
+        {election.status === "COMPLETED" ? (
           <div className="mt-2">
             <motion.button
-              onClick={() => navigate(`/election/past/${election.id}`)}
+              onClick={() => navigate(`/election/COMPLETED/${election.election_id}`)}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
-              className="w-full px-4 py-2 rounded-[var(--radius-md)] font-medium text-white shadow-[var(--shadow-accent)]"
+              className="w-full px-4 py-2 rounded-lg font-medium text-white shadow-lg"
               style={{ backgroundImage: "var(--linear-primary)" }}
             >
               View Results
@@ -85,23 +102,23 @@ export default function ElectionCard({ election, theme }) {
               onClick={handleView}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
-              className="px-4 py-2 rounded-[var(--radius-md)] font-medium text-white shadow-[var(--shadow-accent)]"
+              className="px-4 py-2 rounded-lg font-medium text-white shadow-lg"
               style={{ backgroundImage: "var(--linear-primary)" }}
             >
-              View Details
+              Vote Now
             </motion.button>
 
             <motion.button
-              onClick={() => navigate(`/election/${election.status}/${election.id}/candidates`)}
+              onClick={() => navigate(`/election/${election.status}/${election.election_id}/candidates`)}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
-              className={`px-4 py-2 rounded-[var(--radius-md)] font-medium transition-all border ${
+              className={`px-4 py-2 rounded-lg font-medium transition-all border ${
                 theme === "dark"
-                  ? "text-[var(--text)] border-[var(--border)] bg-[var(--surface-1)] hover:bg-[var(--surface-2)]"
-                  : "text-[#1E3A8A] border-[#D6E0FF] bg-white hover:bg-[#F8FAFF]"
+                  ? "text-gray-300 border-gray-600 bg-gray-700/50 hover:bg-gray-600/50"
+                  : "text-[#1E3A8A] border-[#4F62C2] bg-[#F0F4FF] hover:bg-[#E8ECFF]"
               }`}
             >
-              Manifesto
+              Candidates
             </motion.button>
           </div>
         )}

@@ -147,6 +147,98 @@ class ElectionService {
             throw new Error(`Failed to update election status: ${error.message}`);
         }
     }
+
+    async getUserElections(userId) {
+        try {
+            // Find the admin record for this user
+            const admin = await this.prisma.admin.findFirst({
+                where: {
+                    user_id: userId
+                }
+            });
+
+            if (!admin) {
+                return [];
+            }
+
+            // Get all elections created by this admin
+            const elections = await this.prisma.election.findMany({
+                where: {
+                    created_by: admin.admin_id
+                },
+                include: {
+                    created_by_admin: {
+                        include: {
+                            user: {
+                                select: {
+                                    fullname: true,
+                                    email: true
+                                }
+                            }
+                        }
+                    },
+                    candidates: true,
+                    voters: {
+                        select: {
+                            voter_id: true,
+                            verified: true,
+                            has_voted: true
+                        }
+                    }
+                },
+                orderBy: {
+                    created_at: 'desc'
+                }
+            });
+
+            return elections.map(election => new Election(election));
+        } catch (error) {
+            throw new Error(`Failed to fetch user elections: ${error.message}`);
+        }
+    }
+
+    async getElectionsByStatus(status) {
+        try {
+            const validStatuses = ['UPCOMING', 'ONGOING', 'COMPLETED'];
+            
+            if (!validStatuses.includes(status.toUpperCase())) {
+                throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+            }
+
+            const elections = await this.prisma.election.findMany({
+                where: {
+                    status: status.toUpperCase()
+                },
+                include: {
+                    created_by_admin: {
+                        include: {
+                            user: {
+                                select: {
+                                    fullname: true,
+                                    email: true
+                                }
+                            }
+                        }
+                    },
+                    candidates: true,
+                    voters: {
+                        select: {
+                            voter_id: true,
+                            verified: true,
+                            has_voted: true
+                        }
+                    }
+                },
+                orderBy: {
+                    start_time: 'asc'
+                }
+            });
+
+            return elections.map(election => new Election(election));
+        } catch (error) {
+            throw new Error(`Failed to fetch elections by status: ${error.message}`);
+        }
+    }
 }
 
 module.exports = new ElectionService();

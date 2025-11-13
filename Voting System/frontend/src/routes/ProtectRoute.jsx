@@ -5,7 +5,10 @@ export default function ProtectRoute({ children }) {
   const { isAuthenticated, user } = useAuthStore();
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (!user.isVerified) return <Navigate to="/verify-email" replace />;
+  if (!user?.status || user.status !== 'ACTIVE') {
+    return <Navigate to="/verify-email" replace />;
+  }
 
   return children;
 }
+
