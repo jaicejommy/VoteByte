@@ -10,6 +10,7 @@ import ResetPasswordPage from "../pages/ResetPasswordPage";
 import LandingPage from "../pages/LandingPage";
 import ElectionPage from "../pages/ElectionPage";
 import ActiveElection from "../pages/ActiveElection";
+import ElectionResultPage from "../pages/ElectionResultPage";
 import ElectionCandidates from "../pages/ElectionCandidates";
 import Profile from "../pages/Profile";
 import HostVerify from "../pages/HostVerify";
@@ -78,8 +79,10 @@ export default function UserRoutes({onToggleTheme, theme}) {
         <Route path="/" element={<LandingPage theme={theme} />} />
         <Route path="/elections" element={<ElectionPage theme={theme} />} />
 
+        <Route path='/election/COMPLETED/:id' element={<ElectionResultPage theme={theme} />} />
+        <Route path='/election/completed/:id' element={<ElectionResultPage theme={theme} />} />
         <Route path='/election/active/:id' element={<ProtectRoute><ActiveElection /></ProtectRoute>} />
-        <Route path='/election/:status/:id' element={<ProtectRoute><ActiveElection /></ProtectRoute>} />
+        <Route path='/election/:status(UPCOMING|ONGOING|ACTIVE)/:id' element={<ProtectRoute><ActiveElection /></ProtectRoute>} />
         <Route path='/election/:status/:id/candidates' element={<ElectionCandidates theme={theme} />} />
         <Route path="/profile" element={<ProtectRoute><Profile /></ProtectRoute>} />
 

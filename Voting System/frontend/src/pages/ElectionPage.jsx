@@ -5,7 +5,10 @@ import { motion } from "framer-motion";
 import { Loader } from "lucide-react";
 
 export default function ElectionPage({ theme }) {
-  const { elections, isLoading, fetchElections } = useElectionStore();
+  const elections = useElectionStore((s) => s.elections);
+  const isLoading = useElectionStore((s) => s.isLoading);
+  const fetchElections = useElectionStore((s) => s.fetchElections);
+
 
   useEffect(() => {
     fetchElections();
