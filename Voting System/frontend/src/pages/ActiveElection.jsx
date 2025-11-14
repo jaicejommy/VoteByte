@@ -1,5 +1,6 @@
 import { useParams, Navigate } from "react-router-dom";
 import { useElectionStore } from "../store/electionStore";
+import FaceVerification from "../components/FaceVerification";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 
@@ -16,6 +17,8 @@ export default function ActiveElection() {
   const [form, setForm] = useState({ name: "", party: "", manifesto: "", department: "", year: "", contact: "" });
   const [submittedId, setSubmittedId] = useState(null);
   const [error, setError] = useState("");
+  const [showFaceVerification, setShowFaceVerification] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
 
   if (isPast) {
     return <Navigate to={`/election/COMPLETED/${id}`} replace />;
@@ -36,8 +39,53 @@ export default function ActiveElection() {
 
   // Active / Ongoing elections view
   if (isOngoing) {
+    const handleVoteClick = (candidate) => {
+      setSelectedCandidate(candidate);
+      setShowFaceVerification(true);
+    };
+
+    const handleFaceVerified = async (verificationData) => {
+      if (selectedCandidate) {
+        try {
+          // Call backend to cast vote
+          const response = await fetch("/api/votes/cast", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              electionId: election.id || id,
+              candidateId: selectedCandidate.id || selectedCandidate.candidate_id,
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.success || response.ok) {
+            alert(`Vote cast successfully for ${selectedCandidate.party_name || selectedCandidate.party}!`);
+          } else {
+            alert(result.message || "Failed to cast vote");
+          }
+        } catch (err) {
+          console.error("Error casting vote:", err);
+          alert("Error casting vote: " + err.message);
+        } finally {
+          setShowFaceVerification(false);
+          setSelectedCandidate(null);
+        }
+      }
+    };
+
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen p-10 text-[var(--text)]" style={{ background: "var(--bg)" }}>
+        {showFaceVerification && (
+          <FaceVerification
+            onVerify={handleFaceVerified}
+            onCancel={() => {
+              setShowFaceVerification(false);
+              setSelectedCandidate(null);
+            }}
+          />
+        )}
+
         <h1 className="text-3xl font-bold mb-2">{election.title}</h1>
         <p className="mb-6 text-[var(--text-muted)]">{election.description}</p>
 
@@ -48,7 +96,7 @@ export default function ActiveElection() {
               style={{ background: "var(--surface-1)", borderColor: "var(--border)" }}>
               <h3 className="text-lg font-semibold">{c.name || c.user?.fullname || c.party_name}</h3>
               <p className="text-sm text-[var(--text-muted)]">{c.party || c.party_name}</p>
-              <button className="mt-3 px-4 py-2 rounded-[var(--radius-sm)] text-white"
+              <button onClick={() => handleVoteClick(c)} className="mt-3 px-4 py-2 rounded-[var(--radius-sm)] text-white"
                 style={{ backgroundImage: "var(--linear-primary)" }}>
                 Vote
               </button>

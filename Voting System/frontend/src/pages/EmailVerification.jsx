@@ -6,9 +6,18 @@ import { useAuthStore } from "../store/authStore";
 
 const EmailVerification = ({ theme }) => {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [resendCountdown, setResendCountdown] = useState(0);
   const inputRefs = useRef([]);
   const navigate = useNavigate();
-  const { error, isLoading, verifyEmail } = useAuthStore();
+  const { error, isLoading, verifyEmail, resendOTP } = useAuthStore();
+
+  // Countdown timer for resend button
+  useEffect(() => {
+    if (resendCountdown > 0) {
+      const timer = setTimeout(() => setResendCountdown(resendCountdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCountdown]);
 
   const handleChange = (index, value) => {
     const newCode = [...code];
@@ -33,6 +42,10 @@ const EmailVerification = ({ theme }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const verificationCode = code.join("");
+    if (verificationCode.length !== 6) {
+      toast.error("Please enter all 6 digits");
+      return;
+    }
     try {
       await verifyEmail(verificationCode);
       toast.success("Email Verified Successfully");
@@ -40,6 +53,20 @@ const EmailVerification = ({ theme }) => {
       navigate("/login");
     } catch (err) {
       console.error("ERROR IN VERIFYING:", err);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    try {
+      const success = await resendOTP();
+      if (success) {
+        setResendCountdown(60);
+        setCode(["", "", "", "", "", ""]);
+        inputRefs.current[0]?.focus();
+        toast.success("OTP resent to your email!");
+      }
+    } catch (err) {
+      toast.error("Failed to resend OTP");
     }
   };
 
@@ -85,7 +112,8 @@ const EmailVerification = ({ theme }) => {
                 key={index}
                 ref={(el) => (inputRefs.current[index] = el)}
                 type="text"
-                maxLength="6"
+                inputMode="numeric"
+                maxLength="1"
                 value={digit}
                 onChange={(e) => handleChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
@@ -99,9 +127,13 @@ const EmailVerification = ({ theme }) => {
           </div>
 
           {error && (
-            <p className="text-red-500 font-semibold mt-2 text-center">
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-red-500 font-semibold mt-2 text-center"
+            >
               {error}
-            </p>
+            </motion.p>
           )}
 
           <motion.button
@@ -118,6 +150,29 @@ const EmailVerification = ({ theme }) => {
             {isLoading ? "Verifying..." : "Verify"}
           </motion.button>
         </form>
+
+        <div className="mt-6 pt-6 border-t border-gray-300 dark:border-gray-700">
+          <p className={`text-sm text-center mb-3 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+            Didn't receive the code?
+          </p>
+          <motion.button
+            onClick={handleResendOTP}
+            disabled={resendCountdown > 0}
+            className={`w-full py-2 px-4 rounded-lg font-semibold transition ${
+              resendCountdown > 0
+                ? theme === "dark"
+                  ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : theme === "dark"
+                ? "bg-gray-700 hover:bg-gray-600 text-white"
+                : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+            }`}
+            whileHover={resendCountdown === 0 ? { scale: 1.02 } : {}}
+            whileTap={resendCountdown === 0 ? { scale: 0.98 } : {}}
+          >
+            {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : "Resend Code"}
+          </motion.button>
+        </div>
       </div>
     </motion.div>
   );

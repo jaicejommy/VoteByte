@@ -16,18 +16,33 @@ async function sendOtp(req, res) {
 async function verifyOtp(req, res) {
   try {
     const { email, code } = req.body;
-    if (!email || !code) return res.status(400).json({ message: 'email and code are required' });
+    console.log(`\n=== OTP Verification Request ===`);
+    console.log(`Email: ${email}`);
+    console.log(`Code received: ${code} (type: ${typeof code})`);
+    
+    if (!email || !code) {
+      console.error('Missing email or code in request');
+      return res.status(400).json({ message: 'email and code are required' });
+    }
 
     const result = await verificationService.verifyOtp(email, code);
     if (!result.ok) {
-      if (result.reason === 'expired') return res.status(400).json({ message: 'OTP expired' });
-      if (result.reason === 'invalid') return res.status(400).json({ message: 'Invalid OTP' });
+      if (result.reason === 'expired') {
+        console.warn(`OTP expired for ${email}`);
+        return res.status(400).json({ message: 'OTP expired' });
+      }
+      if (result.reason === 'invalid') {
+        console.error(`OTP code mismatch for ${email}`);
+        return res.status(400).json({ message: 'Invalid OTP' });
+      }
+      console.error(`No OTP found for ${email}`);
       return res.status(400).json({ message: 'No OTP found for this email' });
     }
 
+    console.log(`OTP verification successful for ${email}\n`);
     return res.json({ message: 'Email verified successfully' });
   } catch (err) {
-    console.error(err);
+    console.error('OTP verification error:', err);
     return res.status(500).json({ message: 'Failed to verify OTP' });
   }
 }

@@ -172,3 +172,23 @@ exports.getVoterStatistics = async (req, res) => {
 };
 
 module.exports = exports;
+
+// Dev-only: fetch voter status by email (no auth) for debugging
+exports.getVoterStatusByEmail = async (req, res) => {
+    try {
+        if (process.env.NODE_ENV === 'production') {
+            return res.status(403).json({ message: 'Not allowed in production' });
+        }
+
+        const { email, electionId } = req.query;
+        if (!email || !electionId) {
+            return ApiResponse.badRequest(res, 'email and electionId query parameters are required');
+        }
+
+        const status = await voterService.getVoterStatusByEmail(email, electionId);
+        return ApiResponse.success(res, 'Voter status retrieved (debug)', status);
+    } catch (error) {
+        console.error('Error fetching debug voter status:', error);
+        return ApiResponse.error(res, error.message || 'Internal server error');
+    }
+};

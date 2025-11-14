@@ -255,3 +255,40 @@ exports.getVoterStatistics = async (electionId) => {
 };
 
 module.exports = exports;
+
+/**
+ * Dev helper: get voter status by email for an election (read-only)
+ * @param {string} email
+ * @param {string} electionId
+ */
+exports.getVoterStatusByEmail = async (email, electionId) => {
+    try {
+        if (!email || !electionId) throw new Error('email and electionId are required');
+
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+            return { registered: false, verified: false, has_voted: false, message: 'User not found' };
+        }
+
+        const voter = await prisma.voter.findFirst({
+            where: { user_id: user.user_id, election_id: electionId },
+            include: { user: { select: { fullname: true, email: true, profile_photo: true } } }
+        });
+
+        if (!voter) {
+            return { registered: false, verified: false, has_voted: false, message: 'User is not registered as a voter for this election' };
+        }
+
+        return {
+            registered: true,
+            voter_id: voter.voter_id,
+            verified: voter.verified,
+            has_voted: voter.has_voted,
+            voted_at: voter.voted_at,
+            authType: voter.authType,
+            user: voter.user
+        };
+    } catch (error) {
+        throw error;
+    }
+};

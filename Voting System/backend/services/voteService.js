@@ -78,12 +78,12 @@ exports.castVote = async (electionId, candidateId, userId) => {
         throw new Error('You have already voted in this election');
         }
 
-        // 4. Check if voter has already voted
+        // 5. Check if voter has already voted
         if (voter.has_voted) {
             throw new Error('You have already voted in this election');
         }
 
-        // 5. Check if user exists
+        // 6. Check if user exists
         const user = await prisma.user.findUnique({
             where: { user_id: userId }
         });
@@ -92,7 +92,7 @@ exports.castVote = async (electionId, candidateId, userId) => {
             throw new Error('User not found');
         }
 
-        // 6. Use transaction to record vote and update voter status
+        // 7. Use transaction to record vote and update voter status
         const result = await prisma.$transaction(async (tx) => {
             // Record the vote
             const vote = await tx.vote.create({

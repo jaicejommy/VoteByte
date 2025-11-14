@@ -5,6 +5,7 @@ import { useElectionStore } from "../store/electionStore";
 import api from "../services/apiService";
 import { useAuthStore } from "../store/authStore";
 import { toast } from "react-hot-toast";
+import FaceVerification from "../components/FaceVerification";
 
 // Optional fallback manifesto generator when data lacks manifesto
 const fallbackManifesto = (name, role) => `My vision as ${role} is to improve transparency, accessibility, and student life. I will prioritize better communication, modern tools, and inclusive events that represent every voice on campus. — ${name}`;
@@ -22,6 +23,8 @@ export default function ElectionCandidates({ theme }) {
   const [voterStatus, setVoterStatus] = useState(null);
   const [voteLoading, setVoteLoading] = useState(false);
   const [registering, setRegistering] = useState(false);
+  const [showFaceVerification, setShowFaceVerification] = useState(false);
+  const [pendingVoteCandidate, setPendingVoteCandidate] = useState(null);
 
   const { isAuthenticated } = useAuthStore();
 
@@ -229,7 +232,9 @@ export default function ElectionCandidates({ theme }) {
                                   return;
                                 }
 
-                                const confirmVote = window.confirm(`Confirm vote for ${cand.user?.fullname || cand.party_name || 'this candidate'}?`);
+                                // Show face verification modal for voting
+                                setPendingVoteCandidate(cand);
+                                setShowFaceVerification(true);
                                 if (!confirmVote) return;
 
                                 try {
@@ -415,6 +420,81 @@ export default function ElectionCandidates({ theme }) {
                       Submit Application
                     </button>
                   </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Face Verification Modal for Voting */}
+      <AnimatePresence>
+        {showFaceVerification && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ background: "var(--overlay)" }}
+            onClick={() => setShowFaceVerification(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 240, damping: 24 }}
+              className="w-full max-w-lg rounded-2xl p-6 border shadow-[var(--shadow-elevation)]"
+              style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-2xl font-semibold" style={{ color: "var(--text)" }}>
+                      Face Verification Required
+                    </h2>
+                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                      Please verify your face before voting
+                    </p>
+                  </div>
+                  <button
+                    className="px-3 py-1.5 rounded-[var(--radius-sm)] text-white text-sm font-medium"
+                    style={{ backgroundImage: "var(--linear-primary)" }}
+                    onClick={() => setShowFaceVerification(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div style={{ background: "var(--surface-1)", borderRadius: "var(--radius)" }} className="p-4">
+                  <FaceVerification
+                    electionId={id}
+                    candidateId={pendingVoteCandidate?.candidate_id}
+                    candidateName={pendingVoteCandidate?.user?.fullname || pendingVoteCandidate?.party_name}
+                    onVerified={async () => {
+                      // Cast vote after face verification
+                      try {
+                        setVoteLoading(true);
+                        const payload = { electionId: id, candidateId: pendingVoteCandidate.candidate_id };
+                        await api.post('/votes/cast', payload);
+                        toast.success('Vote cast successfully');
+                        setShowFaceVerification(false);
+                        setPendingVoteCandidate(null);
+                        // Refresh voter status
+                        const voterStatusRes = await api.get(`/voters/status/${id}`);
+                        setVoterStatus(voterStatusRes.data?.data);
+                      } catch (err) {
+                        toast.error(err.response?.data?.message || 'Failed to cast vote');
+                      } finally {
+                        setVoteLoading(false);
+                      }
+                    }}
+                    onCancel={() => {
+                      setShowFaceVerification(false);
+                      setPendingVoteCandidate(null);
+                    }}
+                    theme={theme}
+                  />
                 </div>
               </div>
             </motion.div>

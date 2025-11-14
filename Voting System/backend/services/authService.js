@@ -43,7 +43,23 @@ async function registerUser(data) {
 }
 
 async function authenticateUser(email, password) {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ 
+    where: { email },
+    select: {
+      user_id: true,
+      email: true,
+      password: true,
+      role: true,
+      phone_number: true,
+      gender: true,
+      date_of_birth: true,
+      address: true,
+      profile_photo: true,
+      joined_at: true,
+      status: true,
+      fullname: true,
+    }
+  });
   if (!user) throw new Error('Invalid email or password');
 
   const ok = await bcrypt.compare(password, user.password);
@@ -59,10 +75,24 @@ async function authenticateUser(email, password) {
 }
 
 async function getUserById(id) {
-  const user = await prisma.user.findUnique({ where: { user_id: id } });
+  const user = await prisma.user.findUnique({ 
+    where: { user_id: id },
+    select: {
+      user_id: true,
+      email: true,
+      role: true,
+      phone_number: true,
+      gender: true,
+      date_of_birth: true,
+      address: true,
+      profile_photo: true,
+      joined_at: true,
+      status: true,
+      fullname: true,
+    }
+  });
   if (!user) return null;
-  const { password, ...rest } = user;
-  return rest;
+  return user;
 }
 
 module.exports = { registerUser, authenticateUser, getUserById };

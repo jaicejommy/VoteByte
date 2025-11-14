@@ -6,7 +6,8 @@ const {
     verifyVoter,
     getVotersForElection,
     getVoterStatus,
-    getVoterStatistics
+    getVoterStatistics,
+    getVoterStatusByEmail
 } = require('../controllers/voterController');
 
 /**
@@ -45,6 +46,12 @@ router.get('/status/:electionId', authMiddleware, getVoterStatus);
  * Auth: Not required (can be public)
  */
 router.get('/election/:electionId', getVotersForElection);
+
+// Dev-only debug route to fetch voter status by email without auth
+// Usage: GET /api/voters/debug/status?email=foo@example.com&electionId=<id>
+if (process.env.NODE_ENV !== 'production') {
+    router.get('/debug/status', getVoterStatusByEmail);
+}
 
 /**
  * GET /api/voters/statistics/:electionId

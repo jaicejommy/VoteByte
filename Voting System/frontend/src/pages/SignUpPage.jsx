@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import Input from "../components/Input";
+import FaceCapture from "../components/FaceCapture";
 import { User, Mail, Lock, Loader, ChevronDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import PasswordStrengthMeter from "../components/PasswordStrengthMeter";
@@ -12,6 +13,8 @@ const SignUpPage = ({ theme }) => {
   const [password, setPassword] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [userType, setUserType] = useState("user");
+  const [faceData, setFaceData] = useState(null);
+  const [showFaceCapture, setShowFaceCapture] = useState(false);
   const selectRef = useRef(null);
   const navigate = useNavigate();
 
@@ -25,10 +28,24 @@ const SignUpPage = ({ theme }) => {
       return;
     }
 
+    if (!faceData) {
+      alert("Please capture your face before signing up");
+      return;
+    }
+
     // Convert userType to match backend expectations
     const role = userType.toUpperCase() === 'USER' ? 'USER' : 'HOST';
     
-    const success = await signup(name, email, password, role);
+    // Create FormData to send face image along with other data
+    const formData = new FormData();
+    formData.append('fullname', name);
+    formData.append('email', email);
+    formData.append('password', password);
+    formData.append('role', role);
+    formData.append('face_file', faceData.image, 'face_photo.png');
+    formData.append('face_descriptor', JSON.stringify(faceData.descriptor));
+
+    const success = await signup(name, email, password, role, formData);
     if (success) {
       navigate("/verify-email");
     }
@@ -141,6 +158,48 @@ const SignUpPage = ({ theme }) => {
             </motion.div>
           </div>
 
+          {/* Face Capture Section */}
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            transition={{ duration: 0.3 }}
+            className="mb-4"
+          >
+            <button
+              type="button"
+              onClick={() => setShowFaceCapture(!showFaceCapture)}
+              className={`w-full py-2 px-4 rounded-lg font-semibold mb-3 transition ${
+                theme === "dark"
+                  ? "bg-gray-700 hover:bg-gray-600 text-white"
+                  : "bg-gray-200 hover:bg-gray-300 text-gray-800"
+              }`}
+            >
+              {showFaceCapture ? "Hide Face Capture" : "📸 Capture Your Face"}
+            </button>
+
+            {showFaceCapture && (
+              <FaceCapture 
+                onCapture={(data) => {
+                  setFaceData(data);
+                  setShowFaceCapture(false);
+                }}
+                theme={theme}
+              />
+            )}
+
+            {faceData && !showFaceCapture && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className={`p-3 rounded-lg mb-3 ${theme === "dark" ? "bg-green-900/30 border border-green-500" : "bg-green-100 border border-green-500"}`}
+              >
+                <p className={`text-sm ${theme === "dark" ? "text-green-300" : "text-green-700"}`}>
+                  ✓ Face captured successfully
+                </p>
+              </motion.div>
+            )}
+          </motion.div>
+
           {error && (
             <p className="text-red-500 font-semibold mt-2 text-center">
               {error}
@@ -157,7 +216,7 @@ const SignUpPage = ({ theme }) => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.98 }}
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || !faceData}
           >
             {isLoading ? (
               <Loader className="animate-spin mx-auto" size={24} />

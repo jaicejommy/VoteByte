@@ -10,15 +10,27 @@ const useAuthStore = create((set, get) => ({
   isLoading: false,
   tempEmail: null,
 
-  signup: async (fullname, email, password, role = 'USER') => {
+  signup: async (fullname, email, password, role = 'USER', formData = null) => {
     set({ error: null, isLoading: true });
     try {
-      const response = await api.post('/auth/register', {
-        fullname,
-        email,
-        password,
-        role,
-      });
+      let response;
+      
+      if (formData) {
+        // If FormData is provided (with face file), use it
+        response = await api.post('/auth/register', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      } else {
+        // Otherwise, send JSON
+        response = await api.post('/auth/register', {
+          fullname,
+          email,
+          password,
+          role,
+        });
+      }
 
       const { user } = response.data;
       

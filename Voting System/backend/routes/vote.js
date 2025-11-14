@@ -8,6 +8,10 @@ const {
     getVoterStatus,
     getVoterInfo
 } = require('../controllers/voteController');
+const {
+    verifyFaceForVoting,
+    markFaceVerified
+} = require('../controllers/faceVerificationController');
 
 /**
  * Vote Routes
@@ -53,5 +57,23 @@ router.get('/voter-status/:electionId', authMiddleware, getVoterStatus);
  * Auth: Required
  */
 router.get('/voter-info/:electionId', authMiddleware, getVoterInfo);
+
+/**
+ * POST /api/votes/verify-face
+ * Verify face against stored face for voting
+ * Body: { face_descriptor }
+ * File: face_image
+ * Auth: Required
+ */
+router.post('/verify-face', authMiddleware, verifyFaceForVoting);
+
+/**
+ * POST /api/votes/face-verify/:electionId
+ * Verify face and mark voter as face-verified
+ * Params: electionId
+ * Body: { face_descriptor }
+ * Auth: Required
+ */
+router.post('/face-verify/:electionId', authMiddleware, markFaceVerified);
 
 module.exports = router;
