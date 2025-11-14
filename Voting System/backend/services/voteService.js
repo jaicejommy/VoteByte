@@ -21,7 +21,7 @@ exports.castVote = async (electionId, candidateId, userId) => {
             throw new Error('Election ID, Candidate ID, and User ID are required');
         }
 
-        // 1. Check if election exists and is ongoing
+        // 1. Check if election exists and is in a votable time window
         const election = await prisma.election.findUnique({
             where: { election_id: electionId }
         });
@@ -31,10 +31,13 @@ exports.castVote = async (electionId, candidateId, userId) => {
         }
 
         const now = new Date();
-        if (election.status !== 'ONGOING') {
-            throw new Error(`Election is not ongoing. Current status: ${election.status}`);
+
+        // Do not allow voting in cancelled elections regardless of time
+        if (election.status === 'CANCELLED') {
+            throw new Error('Election is cancelled');
         }
 
+        // Enforce that the current time is within the configured start/end window
         if (now < election.start_time || now > election.end_time) {
             throw new Error('Election is not currently active');
         }
@@ -58,77 +61,95 @@ exports.castVote = async (electionId, candidateId, userId) => {
         }
 
         // 3. Check if voter exists and is verified
+        //    First, if ANY voter record for this user+election has has_voted=true,
+        //    immediately block another vote (handles legacy duplicate voter rows).
+        const existingVotedRecord = await prisma.voter.findFirst({
+            where: {
+                user_id: userId,
+                election_id: electionId,
+                has_voted: true,
+            },
+        });
+
+        if (existingVotedRecord) {
+            throw new Error('You have already voted in this election');
+        }
+
         const voter = await prisma.voter.findFirst({
-                where: {
-                    user_id: userId,
-                    election_id: electionId
-                },
-                include: { user: true }
-            });
+            where: {
+                user_id: userId,
+                election_id: electionId,
+            },
+            include: { user: true },
+        });
 
         if (!voter) {
-        throw new Error('Voter is not registered for this election');
+            throw new Error('Voter is not registered for this election');
         }
 
         if (!voter.verified) {
-        throw new Error('Voter is not verified');
-        }
-
-        if (voter.has_voted) {
-        throw new Error('You have already voted in this election');
-        }
-
-        // 5. Check if voter has already voted
-        if (voter.has_voted) {
-            throw new Error('You have already voted in this election');
+            throw new Error('Voter is not verified');
         }
 
         // 6. Check if user exists
         const user = await prisma.user.findUnique({
-            where: { user_id: userId }
+            where: { user_id: userId },
         });
 
         if (!user) {
             throw new Error('User not found');
         }
 
-        // 7. Use transaction to record vote and update voter status
+        // 7. Use transaction to record vote and update voter status **atomically**
+        //    This prevents race conditions where two very fast requests both
+        //    see has_voted = false and create two votes.
         const result = await prisma.$transaction(async (tx) => {
+            const nowTs = new Date();
+
+            // Atomically flip has_voted from false -> true. If another
+            // concurrent transaction already did this, count will be 0.
+            const updateResult = await tx.voter.updateMany({
+                where: {
+                    voter_id: voter.voter_id,
+                    has_voted: false,
+                },
+                data: {
+                    has_voted: true,
+                    voted_at: nowTs,
+                },
+            });
+
+            if (updateResult.count === 0) {
+                // Someone else just voted with this voter record
+                throw new Error('You have already voted in this election');
+            }
+
             // Record the vote
             const vote = await tx.vote.create({
                 data: {
                     election_id: electionId,
                     candidate_id: candidateId,
-                     voter_id: voter.voter_id, // ✅ correct foreign key
-                    cast_time: new Date()
-                }
+                    voter_id: voter.voter_id,
+                    cast_time: nowTs,
+                },
             });
-
-            // Update voter's has_voted status and voted_at timestamp
-            const updatedVoter = await tx.voter.update({
-                where: { voter_id: voter.voter_id },
-                data: {
-                    has_voted: true,
-                    voted_at: new Date()
-                }
-                });
 
             // Increment candidate's total votes
             const updatedCandidate = await tx.candidate.update({
                 where: {
                     candidate_id_election_id: {
                         candidate_id: candidateId,
-                        election_id: electionId
-                    }
+                        election_id: electionId,
+                    },
                 },
                 data: {
                     total_votes: {
-                        increment: 1
-                    }
-                }
+                        increment: 1,
+                    },
+                },
             });
 
-            return { vote, updatedVoter, updatedCandidate };
+            return { vote, updatedCandidate };
         });
 
         const voteObj = new Vote(result.vote);

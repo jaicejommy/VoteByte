@@ -6,6 +6,57 @@ class ElectionService {
         this.prisma = new PrismaClient();
     }
 
+    /**
+     * Recalculate and persist election.status for all non-cancelled elections
+     * based on start_time/end_time and current time.
+     *
+     * This keeps UPCOMING / ONGOING / COMPLETED in sync with the actual
+     * schedule so that listings and voting logic behave correctly.
+     */
+    async refreshElectionStatuses() {
+        const now = new Date();
+
+        // Fetch only fields we need to compute status
+        const elections = await this.prisma.election.findMany({
+            select: {
+                election_id: true,
+                start_time: true,
+                end_time: true,
+                status: true,
+            },
+        });
+
+        const updates = [];
+
+        for (const e of elections) {
+            // Never override CANCELLED elections automatically
+            if (e.status === 'CANCELLED') continue;
+
+            let nextStatus = e.status;
+
+            if (now < e.start_time) {
+                nextStatus = 'UPCOMING';
+            } else if (now >= e.start_time && now <= e.end_time) {
+                nextStatus = 'ONGOING';
+            } else if (now > e.end_time) {
+                nextStatus = 'COMPLETED';
+            }
+
+            if (nextStatus !== e.status) {
+                updates.push(
+                    this.prisma.election.update({
+                        where: { election_id: e.election_id },
+                        data: { status: nextStatus },
+                    })
+                );
+            }
+        }
+
+        if (updates.length > 0) {
+            await this.prisma.$transaction(updates);
+        }
+    }
+
     async createElection(electionData, userId) {
         try {
             const election = new Election({
@@ -67,6 +118,9 @@ class ElectionService {
 
     async getAllElections() {
         try {
+            // Keep election statuses in sync with their time windows
+            await this.refreshElectionStatuses();
+
             const elections = await this.prisma.election.findMany({
                 include: {
                     created_by_admin: {
@@ -150,6 +204,9 @@ class ElectionService {
 
     async getUserElections(userId) {
         try {
+            // Keep election statuses in sync with their time windows
+            await this.refreshElectionStatuses();
+
             // Find the admin record for this user
             const admin = await this.prisma.admin.findFirst({
                 where: {
@@ -200,14 +257,18 @@ class ElectionService {
     async getElectionsByStatus(status) {
         try {
             const validStatuses = ['UPCOMING', 'ONGOING', 'COMPLETED'];
-            
-            if (!validStatuses.includes(status.toUpperCase())) {
+            const normalizedStatus = status.toUpperCase();
+
+            if (!validStatuses.includes(normalizedStatus)) {
                 throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
             }
 
+            // Ensure statuses reflect current time windows before filtering
+            await this.refreshElectionStatuses();
+
             const elections = await this.prisma.election.findMany({
                 where: {
-                    status: status.toUpperCase()
+                    status: normalizedStatus,
                 },
                 include: {
                     created_by_admin: {
@@ -215,26 +276,26 @@ class ElectionService {
                             user: {
                                 select: {
                                     fullname: true,
-                                    email: true
-                                }
-                            }
-                        }
+                                    email: true,
+                                },
+                            },
+                        },
                     },
                     candidates: true,
                     voters: {
                         select: {
                             voter_id: true,
                             verified: true,
-                            has_voted: true
-                        }
-                    }
+                            has_voted: true,
+                        },
+                    },
                 },
                 orderBy: {
-                    start_time: 'asc'
-                }
+                    start_time: 'asc',
+                },
             });
 
-            return elections.map(election => new Election(election));
+            return elections.map((election) => new Election(election));
         } catch (error) {
             throw new Error(`Failed to fetch elections by status: ${error.message}`);
         }
